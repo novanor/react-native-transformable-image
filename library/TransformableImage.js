@@ -1,7 +1,5 @@
-
-
 import React, {Component, PropTypes} from 'react';
-import {Image} from 'react-native';
+import {Image, View, Animated} from 'react-native';
 
 import ViewTransformer from 'react-native-view-transformer';
 
@@ -15,8 +13,8 @@ export default class TransformableImage extends Component {
 
     static propTypes = {
         pixels: PropTypes.shape({
-            width: PropTypes.number,
-            height: PropTypes.number,
+            width: PropTypes.any, // FIXME
+            height: PropTypes.any, // FIXME
         }),
 
         enableTransform: PropTypes.bool,
@@ -32,6 +30,8 @@ export default class TransformableImage extends Component {
         enableScale: true,
         enableTranslate: true,
         imageComponent: Image,
+        style: {},
+        resizeMode: 'contain',
     };
 
     constructor(props) {
@@ -64,8 +64,8 @@ export default class TransformableImage extends Component {
     render() {
         let maxScale = 1;
         let contentAspectRatio;
-        let width,
-            height; // pixels
+        let width;
+        let height; // pixels
 
         if (this.props.pixels) {
       // if provided via props
@@ -85,12 +85,14 @@ export default class TransformableImage extends Component {
             }
         }
 
-
         return (
             <ViewTransformer
               ref="viewTransformer"
-              key={`viewTransformer#${this.state.keyAccumulator}`} // when image source changes, we should use a different node to avoid reusing previous transform state
-              enableTransform={this.props.enableTransform && this.state.imageLoaded} // disable transform until image is loaded
+              // when image source changes, we should use a different node
+              // to avoid reusing previous transform state
+              key={`viewTransformer#${this.state.keyAccumulator}`}
+              // disable transform until image is loaded
+              enableTransform={this.props.enableTransform && this.state.imageLoaded}
               enableScale={this.props.enableScale}
               enableTranslate={this.props.enableTranslate}
               enableResistance={true}
@@ -99,17 +101,53 @@ export default class TransformableImage extends Component {
               maxScale={maxScale}
               contentAspectRatio={contentAspectRatio}
               onLayout={this.onLayout.bind(this)}
-              style={this.props.style}
+              style={[
+                  {alignItems: 'stretch'},
+                  this.props.style,
+              ]}
             >
-                <this.props.imageComponent
-                  {...this.props}
-                  style={[this.props.style, {backgroundColor: 'transparent'}]}
-                  resizeMode={'contain'}
-                  onLoadStart={this.onLoadStart.bind(this)}
-                  onLoad={this.onLoad.bind(this)}
-                  capInsets={{left: 0.1, top: 0.1, right: 0.1, bottom: 0.1}}
-                />
+                {(this.props.pixels.transform
+                    ? this.renderScalable()
+                    : this.renderImageComponent(this.props.style || {}))}
             </ViewTransformer>
+        );
+    }
+
+    renderScalable() {
+        return (
+            <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
+                <Animated.View
+                  style={[
+                    (this.props.source.width && this.props.source.height
+                        ? {width: this.props.source.width, height: this.props.source.height}
+                        : {}
+                    ),
+                    (this.props.pixels.transform
+                        ? {transform: [this.props.pixels.transform]}
+                        : {}),
+                  ]}
+                >
+                    {this.renderImageComponent()}
+                </Animated.View>
+            </View>
+        );
+    }
+
+    renderImageComponent({width = null, height = null} = {}) {
+        return (
+            <this.props.imageComponent
+              {...this.props}
+              style={[
+                  {backgroundColor: 'transparent'},
+                  (width && height
+                      ? {width, height}
+                      : {flex: 1}),
+              ]}
+              resizeMode={this.props.resizeMode}
+              onLoadStart={this.onLoadStart.bind(this)}
+              onLoad={this.onLoad.bind(this)}
+              capInsets={{left: 0.1, top: 0.1, right: 0.1, bottom: 0.1}}
+            />
         );
     }
 
