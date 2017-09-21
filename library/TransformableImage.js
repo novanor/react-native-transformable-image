@@ -13,9 +13,10 @@ export default class TransformableImage extends Component {
 
     static propTypes = {
         pixels: PropTypes.shape({
-            width: PropTypes.any, // FIXME
-            height: PropTypes.any, // FIXME
+            width: PropTypes.number,
+            height: PropTypes.number,
         }),
+        mountedImage: PropTypes.bool,
 
         enableTransform: PropTypes.bool,
         enableScale: PropTypes.bool,
@@ -32,6 +33,7 @@ export default class TransformableImage extends Component {
         imageComponent: Image,
         style: {},
         resizeMode: 'contain',
+        mountedImage: true,
     };
 
     constructor(props) {
@@ -134,15 +136,14 @@ export default class TransformableImage extends Component {
     }
 
     renderImageComponent({width = null, height = null} = {}) {
+        if (!this.props.mountedImage) {
+            return <View style={(width && height ? {width, height} : {flex: 1})} />;
+        }
+
         return (
             <this.props.imageComponent
               {...this.props}
-              style={[
-                  {backgroundColor: 'transparent'},
-                  (width && height
-                      ? {width, height}
-                      : {flex: 1}),
-              ]}
+              style={(width && height) ? {width, height} : {flex: 1}}
               resizeMode={this.props.resizeMode}
               onLoadStart={this.onLoadStart.bind(this)}
               onLoad={this.onLoad.bind(this)}
